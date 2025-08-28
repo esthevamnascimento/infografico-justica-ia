@@ -1,0 +1,389 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Infográfico: O Dilema da Justiça Preditiva - Caso COMPAS</title>
+    
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #F0F4F8; /* Cor de fundo principal */
+            color: #073B4C; /* Cor do texto principal */
+        }
+        /* Container para os gráficos, garantindo responsividade */
+        .chart-container {
+            position: relative;
+            width: 100%;
+            max-width: 600px;
+            margin: auto;
+            height: 350px;
+        }
+        /* Estilo para a resposta da API Gemini */
+        .gemini-response {
+            white-space: pre-wrap; /* Preserva quebras de linha e espaços */
+            background-color: #f8fafc;
+            border-left: 4px solid #118AB2;
+            padding: 1rem;
+            border-radius: 0.25rem;
+            line-height: 1.6;
+        }
+        /* Animação de carregamento (loader) */
+        .loader {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #118AB2;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* Estilos para o Modal de aviso */
+        .modal-backdrop {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        .modal-content {
+            background-color: white;
+            padding: 2rem;
+            border-radius: 0.5rem;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+        }
+    </style>
+</head>
+<body class="bg-[#F0F4F8]">
+
+    <div id="custom-modal" class="modal-backdrop hidden">
+        <div class="modal-content">
+            <h3 id="modal-title" class="text-xl font-bold text-[#073B4C] mb-4">Aviso</h3>
+            <p id="modal-message" class="text-[#073B4C] mb-6">Ocorreu um erro.</p>
+            <button id="modal-close-btn" class="bg-[#118AB2] text-white font-bold py-2 px-6 rounded-lg hover:bg-[#073B4C] transition-colors">Fechar</button>
+        </div>
+    </div>
+
+    <div class="container mx-auto p-4 md:p-8 max-w-5xl">
+        
+        <header class="text-center mb-12">
+            <h1 class="text-4xl md:text-5xl font-bold text-[#073B4C] mb-2">Justiça Ex Machina</h1>
+            <p class="text-xl md:text-2xl text-[#118AB2]">O Dilema Ético do Viés Algorítmico no Sistema COMPAS</p>
+        </header>
+
+        <main class="space-y-12">
+            
+            <section class="bg-white rounded-lg shadow-md p-6 md:p-8">
+                <h2 class="text-2xl font-bold text-[#073B4C] mb-4 text-center">A Promessa Quebrada da Neutralidade</h2>
+                <p class="text-lg text-[#073B4C] mb-6 text-center">Sistemas de IA como o COMPAS foram criados para tornar a justiça mais objetiva. No entanto, a análise de seus resultados revelou uma realidade alarmante: o algoritmo amplificou vieses sociais existentes.</p>
+                <div class="text-center bg-[#FF6B6B] text-white p-6 rounded-lg">
+                    <p class="text-2xl font-semibold">Réus negros tinham</p>
+                    <p class="text-7xl font-bold my-2">2x</p>
+                    <p class="text-2xl font-semibold">mais chances de serem rotulados incorretamente como de alto risco.</p>
+                </div>
+            </section>
+
+            <section class="bg-white rounded-lg shadow-md p-6 md:p-8">
+                <h2 class="text-2xl font-bold text-[#073B4C] mb-4 text-center">Anatomia do Erro: Disparidade nas Previsões</h2>
+                <p class="text-lg text-[#073B4C] mb-6 text-center">A investigação descobriu que, embora a precisão geral fosse similar entre grupos, os tipos de erro eram sistematicamente diferentes.</p>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+                    <div class="chart-container">
+                        <canvas id="errorRatesChart"></canvas>
+                    </div>
+                    <div class="space-y-4">
+                        <div>
+                            <h3 class="text-xl font-semibold text-[#FF6B6B]">Falsos Positivos</h3>
+                            <p class="text-[#073B4C]">O sistema previu reincidência, mas **NÃO** ocorreu.</p>
+                        </div>
+                        <div>
+                            <h3 class="text-xl font-semibold text-[#118AB2]">Falsos Negativos</h3>
+                            <p class="text-[#073B4C]">O sistema previu que **NÃO** haveria reincidência, mas ocorreu.</p>
+                        </div>
+                        <div class="chart-container h-64 md:h-72">
+                             <canvas id="accuracyChart"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bg-white rounded-lg shadow-md p-6 md:p-8">
+                <h2 class="text-2xl font-bold text-[#073B4C] mb-4 text-center">O Teorema da Impossibilidade da Justiça</h2>
+                <p class="text-lg text-[#073B4C] mb-6 text-center">É impossível otimizar um algoritmo para diferentes métricas de justiça ao mesmo tempo. A escolha de uma métrica é uma decisão ética, não apenas técnica.</p>
+                <div class="flex flex-col md:flex-row justify-center items-stretch gap-4">
+                    <div class="flex-1 border-2 border-[#FFD166] rounded-lg p-4 text-center">
+                        <h3 class="text-xl font-bold text-[#073B4C]">Igualdade de Oportunidades</h3>
+                        <p class="text-5xl my-4">⚖️</p>
+                        <p class="text-[#073B4C]">Exige que as taxas de erro (falsos positivos) sejam as mesmas para todos os grupos.</p>
+                        <p class="mt-2 font-semibold text-[#FF6B6B]">(Violado pelo COMPAS)</p>
+                    </div>
+                    <div class="flex items-center justify-center text-3xl font-bold text-[#073B4C] p-4">VS</div>
+                    <div class="flex-1 border-2 border-[#118AB2] rounded-lg p-4 text-center">
+                        <h3 class="text-xl font-bold text-[#073B4C]">Paridade Preditiva</h3>
+                        <p class="text-5xl my-4">📊</p>
+                        <p class="text-[#073B4C]">Exige que um score de risco signifique a mesma probabilidade de reincidência para todos.</p>
+                        <p class="mt-2 font-semibold text-[#06D6A0]">(Satisfeito pelo COMPAS)</p>
+                    </div>
+                </div>
+            </section>
+
+            <section class="bg-white rounded-lg shadow-md p-6 md:p-8">
+                <h2 class="text-2xl font-bold text-[#073B4C] mb-4 text-center">✨ Análise de Caso Interativa com Gemini</h2>
+                <p class="text-lg text-[#073B4C] mb-6 text-center">Insira um perfil hipotético abaixo. A IA Gemini fará uma análise ética sobre como um sistema como o COMPAS poderia interpretar os dados e quais os riscos envolvidos.</p>
+                <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div>
+                        <label for="case-age" class="block text-sm font-medium text-[#073B4C]">Faixa Etária</label>
+                        <select id="case-age" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                            <option>18-25 anos</option>
+                            <option>26-35 anos</option>
+                            <option>36-50 anos</option>
+                            <option>Mais de 50 anos</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label for="case-priors" class="block text-sm font-medium text-[#073B4C]">Delitos Anteriores</label>
+                        <input type="number" id="case-priors" value="0" min="0" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                    </div>
+                    <div>
+                        <label for="case-crime" class="block text-sm font-medium text-[#073B4C]">Tipo de Crime Atual</label>
+                        <select id="case-crime" class="mt-1 block w-full p-2 border border-gray-300 rounded-md">
+                            <option>Furto</option>
+                            <option>Agressão</option>
+                            <option>Fraude</option>
+                            <option>Posse de drogas</option>
+                        </select>
+                    </div>
+                </div>
+                <div class="text-center">
+                    <button id="generate-analysis-btn" class="bg-[#FF6B6B] text-white font-bold py-3 px-8 rounded-lg hover:bg-[#e05a5a] transition-colors text-lg">
+                        Gerar Análise Ética
+                    </button>
+                </div>
+                <div id="gemini-result-container" class="mt-8">
+                    <div id="gemini-loader" class="loader hidden"></div>
+                    <div id="gemini-response-area" class="gemini-response hidden"></div>
+                </div>
+            </section>
+            
+            <section class="bg-white rounded-lg shadow-md p-6 md:p-8">
+                <h2 class="text-2xl font-bold text-[#073B4C] mb-6 text-center">Recomendações para uma IA Responsável</h2>
+                <div class="space-y-6">
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0 bg-[#FF6B6B] text-white rounded-full h-12 w-12 flex items-center justify-center font-bold text-xl">1</div>
+                        <div>
+                            <h3 class="text-xl font-bold text-[#073B4C]">Desenvolvimento ("Ethics by Design")</h3>
+                            <ul class="list-disc pl-5 mt-2 text-[#073B4C]">
+                                <li>Realizar auditorias de viés contínuas e transparentes.</li>
+                                <li>Priorizar modelos interpretáveis ("caixas de vidro").</li>
+                                <li>Promover a diversidade nas equipes de desenvolvimento.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0 bg-[#118AB2] text-white rounded-full h-12 w-12 flex items-center justify-center font-bold text-xl">2</div>
+                        <div>
+                            <h3 class="text-xl font-bold text-[#073B4C]">Aplicação (Setor Público)</h3>
+                            <ul class="list-disc pl-5 mt-2 text-[#073B4C]">
+                                <li>Estabelecer que a IA nunca seja o fator determinante da decisão.</li>
+                                <li>Exigir transparência total nos contratos com fornecedores.</li>
+                                <li>Capacitar operadores do direito sobre os limites da IA.</li>
+                            </ul>
+                        </div>
+                    </div>
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0 bg-[#06D6A0] text-white rounded-full h-12 w-12 flex items-center justify-center font-bold text-xl">3</div>
+                        <div>
+                            <h3 class="text-xl font-bold text-[#073B4C]">Regulatório e Social</h3>
+                            <ul class="list-disc pl-5 mt-2 text-[#073B4C]">
+                                <li>Regulamentar o Art. 20 da LGPD para garantir revisão humana.</li>
+                                <li>Definir responsabilidade por danos causados por algoritmos.</li>
+                                <li>Fomentar o debate público e a pesquisa interdisciplinar.</li>
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <footer class="text-center mt-12 pt-8 border-t border-[#118AB2]/20">
+            <p class="text-[#073B4C]">Infográfico elaborado como ferramenta de análise sobre Ética em IA.</p>
+        </footer>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+
+            // --- LÓGICA DOS GRÁFICOS (CHART.JS) ---
+
+            /**
+             * Função para renderizar o gráfico de barras comparando as taxas de erro.
+             */
+            function renderErrorRatesChart() {
+                const ctx = document.getElementById('errorRatesChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'bar',
+                    data: {
+                        labels: ['Falsos Positivos (Previsto, mas não ocorreu)', 'Falsos Negativos (Não previsto, mas ocorreu)'],
+                        datasets: [{
+                            label: 'Réus Negros',
+                            data: [44.9, 28.0],
+                            backgroundColor: '#FF6B6B',
+                        }, {
+                            label: 'Réus Brancos',
+                            data: [23.5, 47.7],
+                            backgroundColor: '#118AB2',
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        scales: {
+                            y: { beginAtZero: true, title: { display: true, text: 'Taxa de Erro (%)' } },
+                        },
+                        plugins: {
+                            title: { display: true, text: 'Comparativo das Taxas de Erro por Grupo Racial', font: { size: 16 }, padding: { bottom: 20 } },
+                        }
+                    }
+                });
+            }
+
+            /**
+             * Função para renderizar o gráfico de rosca sobre a precisão geral do sistema.
+             */
+            function renderAccuracyChart() {
+                const ctx = document.getElementById('accuracyChart').getContext('2d');
+                new Chart(ctx, {
+                    type: 'doughnut',
+                    data: {
+                        labels: ['Precisão do COMPAS', 'Margem de Erro'],
+                        datasets: [{ data: [61, 39], backgroundColor: ['#06D6A0', '#FFD166'], hoverOffset: 4 }]
+                    },
+                    options: {
+                        responsive: true,
+                        maintainAspectRatio: false,
+                        plugins: {
+                            title: { display: true, text: 'Precisão Geral do Sistema', font: { size: 16 }, padding: { bottom: 10 } },
+                            legend: { position: 'bottom' }
+                        }
+                    }
+                });
+            }
+
+            // --- LÓGICA DA API GEMINI E INTERATIVIDADE ---
+
+            // Seleção de elementos do DOM
+            const generateBtn = document.getElementById('generate-analysis-btn');
+            const loader = document.getElementById('gemini-loader');
+            const responseArea = document.getElementById('gemini-response-area');
+            const modal = document.getElementById('custom-modal');
+            const modalMessage = document.getElementById('modal-message');
+            const modalCloseBtn = document.getElementById('modal-close-btn');
+
+            /**
+             * Exibe o modal com uma mensagem específica.
+             * @param {string} message - A mensagem a ser exibida.
+             */
+            function showModal(message) {
+                modalMessage.textContent = message;
+                modal.classList.remove('hidden');
+            }
+
+            // Event listener para fechar o modal
+            modalCloseBtn.addEventListener('click', () => {
+                modal.classList.add('hidden');
+            });
+
+            /**
+             * Função assíncrona para chamar a API Gemini e obter a análise ética.
+             */
+            async function generateEthicalAnalysis() {
+                // 1. Atualiza a UI para o estado de carregamento
+                loader.classList.remove('hidden');
+                responseArea.classList.add('hidden');
+                generateBtn.disabled = true;
+                generateBtn.textContent = 'Analisando...';
+
+                // 2. Coleta os dados do formulário
+                const age = document.getElementById('case-age').value;
+                const priors = document.getElementById('case-priors').value;
+                const crime = document.getElementById('case-crime').value;
+
+                // ATENÇÃO: A chave de API não deve ser exposta no lado do cliente em produção.
+                // O ideal é que esta chamada seja feita a partir de um backend.
+                const apiKey = "AIzaSyC6EHk4KNdkaW7bt342a3HtYLTzOJmZ230"; 
+                const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+                // 3. Define o prompt do sistema e a pergunta do usuário
+                const systemPrompt = "Você é um especialista em ética de IA e no sistema de justiça criminal. Com base no perfil simplificado de réu a seguir, gere uma análise em duas partes. Primeiro, explique como um sistema enviesado como o COMPAS poderia classificar esse indivíduo, destacando o potencial de erro (falso positivo/negativo). Segundo, forneça uma crítica ética, discutindo os princípios de justiça em jogo. Não dê um score de risco. Foque nas considerações éticas. Responda em português do Brasil.";
+                const userQuery = `Analise o seguinte perfil:\n- Faixa Etária: ${age}\n- Delitos Anteriores: ${priors}\n- Crime Atual: ${crime}`;
+
+                const payload = {
+                    contents: [{ parts: [{ text: userQuery }] }],
+                    systemInstruction: { parts: [{ text: systemPrompt }] },
+                    generationConfig: { temperature: 0.7, topP: 1.0 }
+                };
+
+                // 4. Lógica de chamada da API com retentativas
+                let lastError = null;
+                try {
+                    const response = await fetch(apiUrl, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify(payload)
+                    });
+
+                    const result = await response.json();
+
+                    if (!response.ok) {
+                        throw new Error(result?.error?.message || `Erro HTTP: ${response.status}`);
+                    }
+                    
+                    const text = result.candidates?.[0]?.content?.parts?.[0]?.text;
+
+                    if (text) {
+                        responseArea.textContent = text;
+                        responseArea.classList.remove('hidden');
+                    } else {
+                        throw new Error("A API retornou uma resposta inválida ou vazia.");
+                    }
+
+                } catch (error) {
+                    lastError = error;
+                }
+
+                // 5. Finaliza o estado de carregamento e trata erros
+                loader.classList.add('hidden');
+                generateBtn.disabled = false;
+                generateBtn.textContent = 'Gerar Análise Ética';
+                
+                if (lastError) {
+                    console.error("Erro ao chamar a API Gemini:", lastError);
+                    showModal(`Não foi possível gerar a análise: ${lastError.message}. Verifique o console para mais detalhes.`);
+                }
+            }
+
+            // Adiciona o evento de clique ao botão
+            generateBtn.addEventListener('click', generateEthicalAnalysis);
+            
+            // Inicializa os gráficos quando a página carregar
+            renderErrorRatesChart();
+            renderAccuracyChart();
+        });
+    </script>
+</body>
+</html>
